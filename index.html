@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Captcha Bridge</title>
   <!-- ここは拡張ではなく外部でホストする（reCAPTCHAのJSを読み込んでOK） -->
-  <script src="https://www.google.com/recaptcha/api.js?render=YOUR_SITE_KEY"></script>
+  <script src="https://www.google.com/recaptcha/api.js?render=6Le-ia4rAAAAAHlS-2cHkru1kzjOUFpKakdraa7q"></script>
   <script>
     (async function(){
       try {
@@ -15,7 +15,7 @@
 
         grecaptcha.ready(async function() {
           try {
-            const token = await grecaptcha.execute('YOUR_SITE_KEY', { action: 'submit' });
+            const token = await grecaptcha.execute('6Le-ia4rAAAAAHlS-2cHkru1kzjOUFpKakdraa7q', { action: 'submit' });
             const u = new URL(redirectUri);
             u.hash = 'token=' + encodeURIComponent(token);
             location.assign(u.toString());
