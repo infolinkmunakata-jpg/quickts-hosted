@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Captcha Bridge</title>
+  <!-- ここは拡張ではなく外部でホストする（reCAPTCHAのJSを読み込んでOK） -->
+  <script src="https://www.google.com/recaptcha/api.js?render=YOUR_SITE_KEY"></script>
+  <script>
+    (async function(){
+      try {
+        const params = new URLSearchParams(location.search);
+        const redirectUri = params.get('redirect_uri');
+        if (!redirectUri) throw new Error('redirect_uri missing');
+
+        grecaptcha.ready(async function() {
+          try {
+            const token = await grecaptcha.execute('YOUR_SITE_KEY', { action: 'submit' });
+            const u = new URL(redirectUri);
+            u.hash = 'token=' + encodeURIComponent(token);
+            location.assign(u.toString());
+          } catch(e) { alert('captcha failed: ' + (e && e.message || e)); }
+        });
+      } catch(e) {
+        document.body.innerText = 'Error: ' + (e && e.message || e);
+      }
+    })();
+  </script>
+  <style>body{font-family:system-ui, sans-serif; padding:24px;}</style>
+</head>
+<body>
+  <h1>Captcha Bridge</h1>
+  <p>このページは reCAPTCHA を実行し、結果だけを拡張へ返します。</p>
+</body>
+</html>
