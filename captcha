@@ -1,0 +1,45 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>QuickTS Captcha Redirect</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>body{font:14px system-ui, sans-serif; margin:24px}</style>
+<div>Running reCAPTCHA…</div>
+<script>
+(function(){
+  // --- resolve params ---
+  const p = new URLSearchParams(location.search);
+  const action = p.get('action') || 'quickts';
+  const siteKey = p.get('site_key') || 'YOUR_SITE_KEY';
+  const redirect = p.get('redirect_uri');
+  if (!redirect) { document.body.innerHTML = 'redirect_uri missing'; throw new Error('redirect_uri missing'); }
+
+  // choose google.com or recaptcha.net based on param
+  const useNet = p.get('use') === 'recaptcha.net';
+  const src = useNet ? 'https://www.recaptcha.net/recaptcha/api.js?render=' + encodeURIComponent(siteKey)
+                     : 'https://www.google.com/recaptcha/api.js?render=' + encodeURIComponent(siteKey);
+
+  // inject api.js then execute
+  var s = document.createElement('script'); s.src = src; s.async = true;
+  s.onload = function(){
+    if (!window.grecaptcha) { location.href = redirect + (redirect.includes('?')?'&':'?') + 'error=no-grecaptcha'; return; }
+    window.grecaptcha.ready(async function(){
+      try{
+        const token = await window.grecaptcha.execute(siteKey, { action });
+        const url = new URL(redirect);
+        url.searchParams.set('token', token);
+        location.href = url.toString();
+      }catch(e){
+        const url = new URL(redirect);
+        url.searchParams.set('error', String(e && (e.message || e)));
+        location.href = url.toString();
+      }
+    });
+  };
+  s.onerror = function(){ 
+    const url = new URL(redirect);
+    url.searchParams.set('error', 'api-load-failed');
+    location.href = url.toString();
+  };
+  document.head.appendChild(s);
+})();
+</script>
