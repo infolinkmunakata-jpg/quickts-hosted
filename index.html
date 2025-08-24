@@ -5,33 +5,38 @@
 <style>body{font:14px system-ui, sans-serif; margin:24px}</style>
 <div>reCAPTCHA Bridge</div>
 <script>
-// handshake: reply to Ping
+// Ping-Pong handshake
 window.addEventListener('message', function(ev){
   if (!ev.data || ev.data.type !== 'qtsPing') return;
-  ev.source && ev.source.postMessage({ type: 'qtsPong' }, ev.origin);
+  ev.source && ev.source.postMessage({ type:'qtsPong' }, ev.origin);
 });
 
-// load API (google.com or recaptcha.net)
 (function(){
   const p = new URLSearchParams(location.search);
-  const action = p.get('action') || 'quickts';
-  const siteKey = p.get('site_key') || 'YOUR_SITE_KEY';
+  const action  = p.get('action') || 'quickts';
+  const siteKey = p.get('site_key') || '6Le-ia4rAAAAAHlS-2cHkru1kzjOUFpKakdraa7q';
   const useNet  = p.get('use') === 'recaptcha.net';
-  const api = useNet ? 'https://www.recaptcha.net/recaptcha/api.js?render=' + encodeURIComponent(siteKey)
-                     : 'https://www.google.com/recaptcha/api.js?render=' + encodeURIComponent(siteKey);
+  const api = useNet
+      ? 'https://www.recaptcha.net/recaptcha/api.js?render=' + encodeURIComponent(siteKey)
+      : 'https://www.google.com/recaptcha/api.js?render=' + encodeURIComponent(siteKey);
+
   var s = document.createElement('script'); s.src = api; s.async = true;
   s.onload = function(){
+    if (!window.grecaptcha) {
+      window.parent && window.parent.postMessage({ type:'qtsError', message:'no-grecaptcha' }, '*');
+      return;
+    }
     window.grecaptcha.ready(async function(){
       try {
-        const token = await grecaptcha.execute(siteKey, { action });
+        const token = await window.grecaptcha.execute(siteKey, { action });
         window.parent && window.parent.postMessage({ type:'qtsToken', token }, '*');
       } catch(e) {
-        window.parent && window.parent.postMessage({ type:'qtsError', message: String(e && (e.message || e)) }, '*');
+        window.parent && window.parent.postMessage({ type:'qtsError', message:String(e && (e.message||e)) }, '*');
       }
     });
   };
   s.onerror = function(){
-    window.parent && window.parent.postMessage({ type:'qtsError', message: 'api-load-failed' }, '*');
+    window.parent && window.parent.postMessage({ type:'qtsError', message:'api-load-failed' }, '*');
   };
   document.head.appendChild(s);
 })();
