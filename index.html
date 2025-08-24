@@ -1,47 +1,38 @@
 <!doctype html>
-<html lang="ja">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Captcha Bridge (postMessage + redirect 両対応)</title>
-  <!-- reCAPTCHA v3 client -->
-  <script src="https://www.google.com/recaptcha/api.js?render=6Le-i4rAAAAAHIS-2cHkru1kzjOUFpKakdraa7q"></script>
-  <style>
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,"Noto Sans","Apple Color Emoji","Segoe UI Emoji";}
-    .sr-only{position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;} 
-  </style>
-</head>
-<body>
-  <p class="sr-only">reCAPTCHA 実行中…</p>
-  <script>
-  (async function() {
-    try {
-      const params = new URLSearchParams(location.search);
-      const mode = params.get('mode'); // 'pm' なら postMessage で親へ返す
-      const action = params.get('action') || 'quickts';
+<meta charset="utf-8">
+<title>QuickTS Captcha Bridge</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>body{font:14px system-ui, sans-serif; margin:24px}</style>
+<div>reCAPTCHA Bridge</div>
+<script>
+// handshake: reply to Ping
+window.addEventListener('message', function(ev){
+  if (!ev.data || ev.data.type !== 'qtsPing') return;
+  ev.source && ev.source.postMessage({ type: 'qtsPong' }, ev.origin);
+});
 
-      await new Promise(r => grecaptcha.ready(r));
-      const token = await grecaptcha.execute('6Le-i4rAAAAAHIS-2cHkru1kzjOUFpKakdraa7q', { action });
-
-      if (mode === 'pm') {
-        // 非表示 iframe 用：親（拡張）へ postMessage
-        parent.postMessage({ type: 'recaptcha-token', token }, '*');
-      } else {
-        // 互換：redirect_uri#token=... で返す
-        const redirectUri = params.get('redirect_uri');
-        if (!redirectUri) throw new Error('redirect_uri missing');
-        const u = new URL(redirectUri);
-        u.hash = 'token=' + encodeURIComponent(token);
-        location.replace(u.toString());
+// load API (google.com or recaptcha.net)
+(function(){
+  const p = new URLSearchParams(location.search);
+  const action = p.get('action') || 'quickts';
+  const siteKey = p.get('site_key') || 'YOUR_SITE_KEY';
+  const useNet  = p.get('use') === 'recaptcha.net';
+  const api = useNet ? 'https://www.recaptcha.net/recaptcha/api.js?render=' + encodeURIComponent(siteKey)
+                     : 'https://www.google.com/recaptcha/api.js?render=' + encodeURIComponent(siteKey);
+  var s = document.createElement('script'); s.src = api; s.async = true;
+  s.onload = function(){
+    window.grecaptcha.ready(async function(){
+      try {
+        const token = await grecaptcha.execute(siteKey, { action });
+        window.parent && window.parent.postMessage({ type:'qtsToken', token }, '*');
+      } catch(e) {
+        window.parent && window.parent.postMessage({ type:'qtsError', message: String(e && (e.message || e)) }, '*');
       }
-    } catch (e) {
-      document.body.textContent = 'captcha error: ' + (e && e.message);
-    }
-  })();
-  </script>
-
-  <footer class="sr-only">
-    This page is protected by reCAPTCHA and the Google Privacy Policy and Terms of Service apply.
-  </footer>
-</body>
-</html>
+    });
+  };
+  s.onerror = function(){
+    window.parent && window.parent.postMessage({ type:'qtsError', message: 'api-load-failed' }, '*');
+  };
+  document.head.appendChild(s);
+})();
+</script>
